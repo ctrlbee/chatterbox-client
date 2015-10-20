@@ -1,10 +1,15 @@
 
 var app = {}; 
 app.server = "https://api.parse.com/1/classes/chatterbox"; 
+app.messages = [];
+app.friends = [];
+app.currentRoom = ""; 
 
+///APP INIT///
 app.init = function(){
     app.fetch();
-}
+    app.getUserName(); 
+};
 
 ////GET MESSAGES////
 app.fetch = function(){
@@ -13,12 +18,18 @@ app.fetch = function(){
     url: app.server,
     type: 'GET',
     success: function(data) {
-      console.log(data); 
-
+      console.log(data);
       for(var i = 0; i < data.results.length; i++) {
         datum = data.results[i];
-        app.addMessage(datum);
+        //create the global prop
+        if(app.syntaxCheck(datum['username']) && app.syntaxCheck(datum['text']) && app.syntaxCheck(datum['roomname'])) {
+          app.messages.push(datum);
+        }
       }
+      //call add message with global prop
+      app.addMessages(app.messages);
+      app.addRooms(app.messages); 
+
       $('.username').on('click', function() {
         app.addFriend(); 
       });
@@ -30,14 +41,18 @@ app.fetch = function(){
 };
 
 // Add message object to the chat section of the DOM after sytax check
-app.addMessage = function (datum) {
-  if(app.syntaxCheck(datum['username']) && app.syntaxCheck(datum['text']) && app.syntaxCheck(datum['roomname'])) {
-    $message = $('<div class="message"></div>');
-    $message.append('<div class="username"><a href="#">'+ datum.username + '</a> says: </div>');
-    $message.append('<div class="time">' + datum.createdAt +'</div>')
-    $message.append('<div class="text">' + datum.text +'</div>')
-    $('#chats').append($message);
+app.addMessages = function (messageList) {
+  for(var i = 0; i < messageList.length; i++) {
+    app.addMessage(messageList[i]);
   }
+};
+
+app.addMessage = function (datum) {
+  $message = $('<div class="message"></div>');
+  $message.append('<div class="username"><a href="#">'+ datum.username + '</a> says: </div>');
+  $message.append('<div class="time">' + datum.createdAt +'</div>')
+  $message.append('<div class="text">' + datum.text +'</div>')
+  $('#chats').append($message);
 };
 
 
@@ -47,9 +62,9 @@ app.addMessage = function (datum) {
 ////POST MESSAGES////
 app.handleSubmit = function(){
   var msg = {}; 
-  msg.username = "sammy"; 
+  msg.username = app.getUserName(); 
   msg.text = $('#message').val(); 
-  msg.roomname = "champaign room"; 
+  msg.roomname = app.currentRoom;
   app.send(msg); 
 };
 
@@ -70,36 +85,50 @@ app.send = function(message){
 
 app.clearMessages = function () {
   $('#chats').html('');
-}
+};
 
 
 
 ////ROOMS////
 //will get populate from fetch or from user
-app.addRoom = function(datum){
-  if(app.syntaxCheck(datum)) {
-    $('#roomSelect').append($('<option></option>'))
-                    .attr('value', datum['roomname'])
-                    .text(datum['roomname']);
+app.addRooms = function(){
+  var rooms = {}; //rooms[theroom] = "theroom"
+  //create list of rooms (deduped)
+  for (var i = 0; i < app.messages.length; i++){
+    rooms[app.messages[i].roomname] = true; 
   }
-}
+  //append to select html elememt
+  for (var key in rooms){
+    app.addRoom(key); 
+  }
+  console.log(rooms); 
+};
 
-app.getRooms = function(){
+app.addRoom = function(datum){
+  console.log(datum); 
+  if(app.syntaxCheck(datum)) {
+    $('#roomSelect').append($('<option></option>')
+                    .attr('value', datum)
+                    .text(datum));
+  }
+};
 
-}
-
-
+app.getMessagesForRoom = function(roomName){
+  return _.filter(app.messages, function(el){
+    return el['roomname'] === roomName;
+  });
+};
 
 
 ///FRIENDS////
 app.addFriend = function(){
   console.log('friend');
-}
+};
 
 
 
 
-///SYNTAX CHECK UTILITY////
+///UTILITY////
 app.syntaxCheck = function (string) {
   bannedChars = {'<' : true, '>' : true};
   if(!string) {
@@ -111,15 +140,50 @@ app.syntaxCheck = function (string) {
     }
   }
   return true;
+};
+
+app.getUserName = function(){
+  var qs = window.location.search; 
+  var indexOfEqual = qs.indexOf("="); 
+  var user = qs.slice(indexOfEqual+1); 
+  return user; 
 }
+
 
 // YOUR CODE HERE:
 $(document).on('ready', function () {
   app.init(); 
 
   $('.submit').on('click', function(){
-    app.handleSubmit(); 
-  })
+    app.handleSubmit();
+    app.fetch(); 
+    var selectedRoom = $('#roomSelect').val();
+    roomMessages = app.getMessagesForRoom(selectedRoom); 
+    app.clearMessages();  
+    app.addMessages(roomMessages);
+
+  });
+
+  $('#roomSelect').on('change', function(){
+    var selectedRoom = $('#roomSelect').val();
+    var roomMessages = [];
+    if(selectedRoom === 'allRooms') {
+      roomMessages = app.messages;
+    } else if(selectedRoom === 'newRoom') {
+      $('#room').toggle();
+    } else {
+      roomMessages = app.getMessagesForRoom(selectedRoom); 
+      app.currentRoom = selectedRoom; 
+    }
+    app.clearMessages();  
+    app.addMessages(roomMessages); 
+  });
+
+  $('.roomSubmit').on('click', function () {
+    app.addRoom($('.roomInput').val());
+    $('.roomInput').val(''); 
+    app.currentRoom = selectedRoom; 
+  });
 
 });
 
