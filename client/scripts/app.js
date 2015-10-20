@@ -2,7 +2,7 @@
 var app = {}; 
 app.server = "https://api.parse.com/1/classes/chatterbox"; 
 app.messages = [];
-app.friends = [];
+app.friends = {};
 app.currentRoom = ""; 
 
 ///APP INIT///
@@ -31,7 +31,7 @@ app.fetch = function(){
       app.addRooms(app.messages); 
 
       $('.username').on('click', function() {
-        app.addFriend(); 
+        app.addFriend(this); 
       });
     },
     error: function() {
@@ -49,7 +49,11 @@ app.addMessages = function (messageList) {
 
 app.addMessage = function (datum) {
   $message = $('<div class="message"></div>');
-  $message.append('<div class="username"><a href="#">'+ datum.username + '</a> says: </div>');
+  if(app.friends[datum.username]) {
+    $message.append('<div class="username friend"><a href="#">'+ datum.username + '</a> says: </div>');
+  } else {
+    $message.append('<div class="username"><a href="#">'+ datum.username + '</a> says: </div>');
+  }
   $message.append('<div class="time">' + datum.createdAt +'</div>')
   $message.append('<div class="text">' + datum.text +'</div>')
   $('#chats').append($message);
@@ -121,8 +125,14 @@ app.getMessagesForRoom = function(roomName){
 
 
 ///FRIENDS////
-app.addFriend = function(){
-  console.log('friend');
+app.addFriend = function(friend){
+  console.log(friend);
+  console.log(app.friends);  
+  var name = $(friend).find('a').text();
+  alert(name + ' is now your friend!');
+  app.friends[name] = true;
+  app.clearMessages();
+  app.addMessages(app.messages);
 };
 
 
