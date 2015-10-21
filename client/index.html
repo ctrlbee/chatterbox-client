@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
@@ -14,21 +14,25 @@
   </head>
   <body>
     <div id="main">
+      <div id="friends">
+        <h3>Friend List</h3>
+        <ul>
+        </ul>
+      </div>
       <h1>chatterbox</h1>
       <select name='roomSelect' id="roomSelect"> 
-      <option value='allRooms'>The Real All Rooms</option>>
-      <option value='newRoom'>Make a new room</option>
+        <option value='allRooms'>The Real All Rooms</option>>
+        <option value='newRoom'>Make a new room</option>
       </select>
       <span id='room' style='display: none;'>
         <input class="roomInput" type="text">
         <button class="roomSubmit">Start Room!</button>
       </span>
-
-      </br> </br>
       <div id="send">
         <input type="text" id="message">
         <button class="submit">post chat</button>
       </div>
+      <div id="clear"></div>
     </div>
     <div id="chats"></div>
   </body>

@@ -2,13 +2,14 @@
 var app = {}; 
 app.server = "https://api.parse.com/1/classes/chatterbox"; 
 app.messages = [];
-app.friends = {};
+app.friends = JSON.parse(localStorage.friends);
 app.currentRoom = ""; 
 
 ///APP INIT///
 app.init = function(){
     app.fetch();
-    app.getUserName(); 
+    app.getUserName();
+    app.getFriends(); 
 };
 
 ////GET MESSAGES////
@@ -18,13 +19,15 @@ app.fetch = function(){
     url: app.server,
     type: 'GET',
     success: function(data) {
-      console.log(data);
       for(var i = 0; i < data.results.length; i++) {
         datum = data.results[i];
         //create the global prop
-        if(app.syntaxCheck(datum['username']) && app.syntaxCheck(datum['text']) && app.syntaxCheck(datum['roomname'])) {
-          app.messages.push(datum);
-        }
+
+        datum['username'] = app.syntaxCheck(datum['username']); 
+        datum['text'] = app.syntaxCheck(datum['text']); 
+        datum['roomname'] = app.syntaxCheck(datum['roomname']); 
+        
+        app.messages.push(datum);
       }
       //call add message with global prop
       app.addMessages(app.messages);
@@ -48,15 +51,17 @@ app.addMessages = function (messageList) {
 };
 
 app.addMessage = function (datum) {
-  $message = $('<div class="message"></div>');
-  if(app.friends[datum.username]) {
-    $message.append('<div class="username friend"><a href="#">'+ datum.username + '</a> says: </div>');
-  } else {
-    $message.append('<div class="username"><a href="#">'+ datum.username + '</a> says: </div>');
+  if(datum.text) {
+    $message = $('<div class="message"></div>');
+    if(app.friends[datum.username]) {
+      $message.append('<div class="username friend"><a href="#">'+ datum.username + '</a> says: </div>');
+    } else {
+      $message.append('<div class="username"><a href="#">'+ datum.username + '</a> says: </div>');
+    }
+    $message.append('<div class="time">' + datum.createdAt +'</div>')
+    $message.append('<div class="text">' + datum.text +'</div>')
+    $('#chats').append($message);
   }
-  $message.append('<div class="time">' + datum.createdAt +'</div>')
-  $message.append('<div class="text">' + datum.text +'</div>')
-  $('#chats').append($message);
 };
 
 
@@ -105,16 +110,13 @@ app.addRooms = function(){
   for (var key in rooms){
     app.addRoom(key); 
   }
-  console.log(rooms); 
 };
 
 app.addRoom = function(datum){
-  console.log(datum); 
-  if(app.syntaxCheck(datum)) {
-    $('#roomSelect').append($('<option></option>')
-                    .attr('value', datum)
-                    .text(datum));
-  }
+  datum = app.syntaxCheck(datum) 
+  $('#roomSelect').append($('<option></option>')
+                  .attr('value', datum)
+                  .text(datum));
 };
 
 app.getMessagesForRoom = function(roomName){
@@ -126,31 +128,51 @@ app.getMessagesForRoom = function(roomName){
 
 ///FRIENDS////
 app.addFriend = function(friend){
-  console.log(friend);
-  console.log(app.friends);  
   var name = $(friend).find('a').text();
   alert(name + ' is now your friend!');
   app.friends[name] = true;
+  localStorage.friends = JSON.stringify(app.friends); 
   app.clearMessages();
   app.addMessages(app.messages);
+  app.getFriends(); 
 };
+
+app.getFriends = function(){
+  var $friendList = $('#friends').find('ul'); 
+  $friendList.html(''); 
+  for(var key in app.friends){
+    $friendList.append('<li>'+key+'</li>');
+  }
+}
 
 
 
 
 ///UTILITY////
 app.syntaxCheck = function (string) {
-  bannedChars = {'<' : true, '>' : true};
+  bannedChars = {'<' : '&lt', '>' : '&gt', '&' : '&amp'};
+  //bannedChars = {}; 
+  var newString = '';
+  if(string) {
+    string = string.split('');
+  }
   if(!string) {
-    return false;
+    return '';
   }
   for(var i = 0; i < string.length; i++) {
     if(string[i] in bannedChars) {
-      return false;
-    }
+      newString += bannedChars[string[i]];
+    } else { 
+      if(string[i] === '%' && string[i+1] === '2' && string[i+2] === '0') {
+        string.splice(i, 3, ' ');
+      }
+      newString += string[i];
+    } 
   }
-  return true;
+  return newString;
 };
+
+
 
 app.getUserName = function(){
   var qs = window.location.search; 
@@ -190,11 +212,17 @@ $(document).on('ready', function () {
   });
 
   $('.roomSubmit').on('click', function () {
+    selectedRoom = $('#roomSelect').val();
     app.addRoom($('.roomInput').val());
     $('.roomInput').val(''); 
     app.currentRoom = selectedRoom; 
   });
 
+  $('#chats').on('click', function () {
+    $('.username').on('click', function() {
+      app.addFriend(this); 
+    });
+  });
 });
 
 // needed these to make test cases pass: 
