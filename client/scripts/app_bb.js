@@ -11,11 +11,12 @@ var Message = Backbone.Model.extend({
 var MessageView = Backbone.View.extend({
   initialize: function() {
     this.model.on('change', this.render, this);
+    this.render();
   },
 
   render: function() {
       this.$el = $('<div class="message"></div>'); 
-      this.$el.append('<div class="username"><a href="#">'+ this.model.get('username') + '</a> says: </div>');
+      this.$el.append('<div class="username"><a href="#">'+ this.model.get('username') + '</a></div>');
       this.$el.append('<div class="time">' + this.model.get('time') +'</div>');
       this.$el.append('<div class="text">' + this.model.get('message') +'</div>');
       
@@ -35,22 +36,27 @@ var Messages = Backbone.Collection.extend({
     });
   }, 
 
-  parse: function(data) {
-    var msgs = _(data.results).map(function (datum) {
-      return new Message(datum.username, datum.roomname, datum.text, datum.createdAt);
-    });
-    return msgs;
-  },
-
  fetchSuccess: function (collection, response) {
-      //console.log('Collection fetch success', response);
-      //console.log(collection);
-      //console.log('Collection models: ', this.models);
+      console.log('Collection fetch success', response);
+      //console.log('Collection models: ', collection.models);
+
+       for(var i = 0; i<collection.models.length; i++){
+        var singleMsgView = new MessageView({model: collection.models[i]})
+        $('#chats').append(singleMsgView.render());
+      }
   },
 
   fetchError: function (collection, response) {
       throw new Error("Message fetch error");
+  },   
+
+  parse: function(data) {
+    var msgs = data.results.map(function (datum) {
+      return new Message(datum.username, datum.roomname, datum.text, datum.createdAt);
+    });
+    return msgs;
   }
+
 }); 
 
 
@@ -58,23 +64,20 @@ var Messages = Backbone.Collection.extend({
 var MessagesView = Backbone.View.extend({
   
   initialize: function(){
-    //this.collection = new Messages();
+    this.collection = new Messages();
+    console.log(this.collection.models);
     this.collection.on('change', this.render, this); 
     this.render();
   },
 
   render: function(){
 
-    console.log(this.collection); 
-
-    this.collection.each(function(msg){
-      //var view = new MessageView({model: msg});
-      console.log('what you say?')
-      //return view.render();
-    }); 
-
+    this.$el.append(this.collection.map(function(msg){
+      var view = new MessageView({model: msg});
+      return view.render();
+    })); 
    
-    $('#chats').append(this.$el[0]);
+    $('#chats').append(this.$el);
 
     return this.$el;
   }
@@ -83,15 +86,14 @@ var MessagesView = Backbone.View.extend({
 
 $(document).on('ready', function(){
   var msgs = new Messages();
-  for(var i = 0; i<msgs.length; i++){
-    var singleMsg = new Message({model: msgs.models[i]})
-    $('#chats').append(singleMsg.render());
-    
-  }
-  //var msgsView = new MessagesView({collection: msgs}); 
-
-  console.log(msgs); 
-
+  
+  // console.log(msgs.models);
+  //  for(var i = 0; i<msgs.length; i++){
+  //   console.log('loop');
+  //   var singleMsg = new Message({model: msgs.models[i]})
+  //   console.log(singleMsg.render());
+  //   $('#chats').append(singleMsg.render());
+  // }
 });
 
 
